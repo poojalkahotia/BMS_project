@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Compact Form Controls */
+    .form-control-sm, .form-select-sm {
+        padding: 0.15rem 0.3rem;
+        font-size: 0.8rem;
+        min-height: 24px;
+    }
+    .form-label { margin-bottom: 0.1rem; font-size: 0.75rem !important; }
+    .card-body { padding: 0.5rem !important; }
+    .btn-sm { padding: 0.1rem 0.5rem; font-size: 0.8rem; }
+    
+    /* Compact Spacing */
+    .mb-3 { margin-bottom: 0.25rem !important; }
+    .mb-2 { margin-bottom: 0.2rem !important; }
+    .g-2 { gap: 0.25rem !important; }
+    
+    /* Grid Scrollbar */
+    .table-responsive { height: 30vh !important; } 
+</style>
+
+<div class="container-fluid p-1">
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-form-header text-white py-1">
+                    <h6 class="mb-0 fw-bold small"><i class="bi bi-cart3 me-2"></i>Sale Entry</h6>
+                </div>
+                <div class="card-body bg-light">
+                    
+                    <!-- Top Details Section -->
+                    <div class="row mb-1">
+                        <!-- Left: Party Details (Stacked) -->
+                        <div class="col-md-6">
+                            <!-- Party Name -->
+                            <div class="row mb-1 align-items-center">
+                                <label class="col-3 col-form-label small fw-bold text-secondary">Party Name</label>
+                                <div class="col-9">
+                                    <select class="form-select form-select-sm select2" id="partySelect" onchange="fetchPartyDetails()">
+                                        <option value="">Select Party...</option>
+                                        {% for party in parties %}
+                                        <option value="{{ party.partyname }}">{{ party.partyname }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Address 1 -->
+                            <div class="row mb-1">
+                                <div class="col-9 offset-3">
+                                    <input type="text" class="form-control form-control-sm bg-white" id="partyAdd1" readonly placeholder="Address Line 1">
+                                </div>
+                            </div>
+                            <!-- Address 2 -->
+                            <div class="row mb-1">
+                                <div class="col-9 offset-3">
+                                    <input type="text" class="form-control form-control-sm bg-white" id="partyAdd2" readonly placeholder="Address Line 2">
+                                </div>
+                            </div>
+                            <!-- City -->
+                            <div class="row mb-1">
+                                <div class="col-9 offset-3">
+                                    <input type="text" class="form-control form-control-sm bg-white" id="partyCity" readonly placeholder="City">
+                                </div>
+                            </div>
+                            <!-- Mobile -->
+                            <div class="row mb-1">
+                                <div class="col-9 offset-3">
+                                    <input type="text" class="form-control form-control-sm bg-white" id="partyMobile" readonly placeholder="Mobile">
+                                </div>
+                            </div>
+                            <!-- Email -->
+                            <div class="row mb-1">
+                                <div class="col-9 offset-3">
+                                    <input type="text" class="form-control form-control-sm bg-white" id="partyEmail" readonly placeholder="Email">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right: Invoice Details -->
+                        <div class="col-md-4 offset-md-2">
+                             <!-- Invoice No -->
+                             <div class="row mb-1 align-items-center">
+                                <label class="col-4 col-form-label small fw-bold text-secondary text-end">Invoice No</label>
+                                <div class="col-8">
+                                    <input type="text" class="form-control form-control-sm bg-white" id="invNo" value="{{ next_inv }}">
+                                </div>
+                             </div>
+                             <!-- Date -->
+                             <div class="row mb-1 align-items-center">
+                                <label class="col-4 col-form-label small fw-bold text-secondary text-end">Date</label>
+                                <div class="col-8">
+                                    <input type="date" class="form-control form-control-sm" id="invDate" value="{{ sale.invdate|date:'Y-m-d' }}">
+                                </div>
+                             </div>
+                             <!-- Time -->
+                             <div class="row mb-1 align-items-center">
+                                <label class="col-4 col-form-label small fw-bold text-secondary text-end">Time</label>
+                                <div class="col-8">
+                                    <input type="time" class="form-control form-control-sm" id="invTime">
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-1 text-muted">
+
+                    <!-- Item Entry Section -->
+                    <div class="card p-1 mb-2 shadow-sm border-0 bg-custom-gray">
+                        <div class="row g-1 align-items-end">
+                            <div class="col-md-5">
+                                <label class="form-label small fw-bold text-secondary">Item Name</label>
+                                <select class="form-select form-select-sm select2" id="itemSelect" onchange="fetchItemDetails()">
+                                    <option value="">Select Item...</option>
+                                    {% for item in items %}
+                                    <option value="{{ item.itemname }}">{{ item.itemname }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small fw-bold text-secondary">Qty</label>
+                                <input type="number" class="form-control form-control-sm text-end" id="itemQty" oninput="calculateItemAmount()">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-secondary">Rate</label>
+                                <input type="number" class="form-control form-control-sm text-end" id="itemRate" oninput="calculateItemAmount()">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold text-secondary">Amount</label>
+                                <input type="number" class="form-control form-control-sm text-end bg-white" id="itemAmount" readonly>
+                            </div>
+                            <div class="col-md-2 d-flex gap-1">
+                                <button class="btn btn-sm btn-primary w-50 fw-bold" id="btnAddItem" onclick="addOrUpdateItem()" data-next="itemSelect">Add</button>
+                                <button class="btn btn-sm btn-outline-danger w-50 fw-bold" onclick="clearItemInput()">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Item Grid -->
+                    <div class="table-responsive mb-2 border bg-white rounded">
+                        <table class="table table-sm table-hover mb-0" id="itemsTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="w-40px">Sl</th>
+                                    <th>Item Description</th>
+                                    <th class="text-end w-80px">Qty</th>
+                                    <th class="text-end w-100px">Rate</th>
+                                    <th class="text-end w-120px">Amount</th>
+                                    <th class="text-center w-60px">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Rows will be added here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Footer Section -->
+                    <div class="row g-1">
+                        <!-- Left Side: Words, Remarks & Buttons -->
+                        <div class="col-md-7">
+                            <!-- Words and Remarks (Open Grid) -->
+                            <div class="p-1">
+                                <!-- Amount in Words Row -->
+                                <div class="row mb-1 align-items-center">
+                                    <label class="col-md-3 form-label small fw-bold text-secondary mb-0">Words</label>
+                                    <div class="col-md-9">
+                                        <input type="text" class="form-control form-control-sm bg-white fw-bold text-primary" id="amountInWords" readonly value="{{ sale.amount_in_words|default:'' }}">
+                                    </div>
+                                </div>
+                                
+                                <!-- Remarks Row -->
+                                <div class="row align-items-center mb-2">
+                                    <label class="col-md-3 form-label small fw-bold text-secondary mb-0">Remarks</label>
+                                    <div class="col-md-9">
+                                        <textarea class="form-control form-control-sm resize-none" rows="1" id="remarks">{{ sale.remark|default:'' }}</textarea>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons (Moved Here) -->
+                                <div class="row mt-2">
+                                    <div class="col-md-9 offset-md-3 d-flex gap-2">
+                                        <button class="btn btn-primary btn-sm fw-bold shadow-sm min-w-100px" onclick="saveSale()"><i class="bi bi-save me-1"></i> Save</button>
+                                        <button class="btn btn-outline-secondary btn-sm fw-bold min-w-100px">Clear</button>
+                                        <button class="btn btn-outline-dark btn-sm fw-bold min-w-100px">Exit</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Side: Totals -->
+                        <div class="col-md-5">
+                            <div class="card p-2 border-0 bg-white shadow-sm">
+                                <div class="row g-1 mb-1 align-items-center">
+                                    <div class="col-6 text-end small fw-bold text-secondary">Sub Total:</div>
+                                    <div class="col-6"><input type="number" class="form-control form-control-sm text-end bg-light" id="subTotal" value="{{ sale.total|default:'0.00' }}" readonly></div>
+                                </div>
+                                <div class="row g-1 mb-1 align-items-center">
+                                    <div class="col-6 text-end small fw-bold text-secondary">Discount (%):</div>
+                                    <div class="col-3"><input type="number" class="form-control form-control-sm text-end" id="discountPer" value="{{ sale.discount_per|default:'0.00' }}" oninput="calculateFinalTotal()"></div>
+                                    <div class="col-3"><input type="number" class="form-control form-control-sm text-end" id="discountAmt" value="{{ sale.discount_amt|default:'0.00' }}" oninput="calculateFinalTotal('amt')"></div>
+                                </div>
+                                <div class="row g-1 mb-1 align-items-center">
+                                    <div class="col-6 text-end small fw-bold text-secondary">Adjustment:</div>
+                                    <div class="col-6"><input type="number" class="form-control form-control-sm text-end" id="adjustment" value="{{ sale.adjustment|default:'0.00' }}" oninput="calculateFinalTotal()"></div>
+                                </div>
+                                <hr class="my-1">
+                                <div class="row g-1 align-items-center">
+                                    <div class="col-6 text-end fw-bold text-dark">Net Amount:</div>
+                                    <div class="col-6"><input type="number" class="form-control form-control-sm text-end fw-bold text-primary fs-6" id="netAmount" value="{{ sale.net_amount|default:'0.00' }}" readonly></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="sale-data" type="application/json">
+    {{ sale_data|safe|default:"null" }}
+</script>
+<script src="{% static 'transactions/js/sale_entry.js' %}"></script>
+{% endblock %}

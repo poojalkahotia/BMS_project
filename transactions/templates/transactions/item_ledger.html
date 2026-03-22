@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="text-primary"><i class="bi bi-clock-history me-2"></i>Item Ledger Analysis</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <button onclick="window.print()" class="btn btn-secondary"><i class="bi bi-printer me-2"></i>Print</button>
+    </div>
+</div>
+
+<!-- Item Selection Form -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body bg-light">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-6">
+                <label for="item" class="form-label fw-bold">Select Item</label>
+                <select name="item" id="item" class="form-select select2" onchange="this.form.submit()">
+                    <option value="">-- Choose an Item --</option>
+                    {% for item in items %}
+                        <option value="{{ item.itemname }}" {% if selected_item == item.itemname %}selected{% endif %}>
+                            {{ item.itemname }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                {% if selected_item %}
+                    <div class="d-flex justify-content-end gap-3 text-muted">
+                        <div>Opening Stock: <span class="fw-bold text-dark">{{ summary.opening_stock|floatformat:2 }}</span></div>
+                        <div>Current Stock: <span class="fw-bold text-primary">{{ summary.closing_stock|floatformat:2 }}</span></div>
+                    </div>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if selected_item %}
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="bg-primary text-white text-center">
+                        <tr>
+                            <th>Date</th>
+                            <th>Inv. No</th>
+                            <th>Type</th>
+                            <th class="text-start">Party Name</th>
+                            <th>In (Qty)</th>
+                            <th>Out (Qty)</th>
+                            <th>Rate</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        <!-- Opening Balance Row -->
+                        <tr class="table-info fw-bold">
+                            <td colspan="4" class="text-end">Opening Stock</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>{{ summary.opening_stock|floatformat:2 }}</td>
+                        </tr>
+
+                        {% for row in ledger_data %}
+                        <tr>
+                            <td>{{ row.date|date:"d M Y" }}</td>
+                            <td>{{ row.inv_no }}</td>
+                            <td>
+                                <span class="badge {% if row.type == 'Sale' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                    {{ row.type }}
+                                </span>
+                            </td>
+                            <td class="text-start">{{ row.party }}</td>
+                            <td class="text-success fw-bold">
+                                {% if row.in_qty > 0 %}{{ row.in_qty|floatformat:2 }}{% else %}-{% endif %}
+                            </td>
+                            <td class="text-danger fw-bold">
+                                {% if row.out_qty > 0 %}{{ row.out_qty|floatformat:2 }}{% else %}-{% endif %}
+                            </td>
+                            <td>{{ row.rate|floatformat:2 }}</td>
+                            <td class="fw-bold">{{ row.balance|floatformat:2 }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center p-4 text-muted">No transactions found for this item.</td>
+                        </tr>
+                        {% endfor %}
+                        
+                        <!-- Closing Row -->
+                        <tr class="table-dark fw-bold">
+                            <td colspan="4" class="text-end">Total / Closing Stock</td>
+                            <td>{{ summary.total_in|floatformat:2 }}</td>
+                            <td>{{ summary.total_out|floatformat:2 }}</td>
+                            <td>-</td>
+                            <td>{{ summary.closing_stock|floatformat:2 }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, rgba(30, 60, 114, 0.95) 0%, rgba(42, 82, 152, 0.95) 100%), url('https://source.unsplash.com/1600x900/?technology,office');
+        background-size: cover;
+        background-position: center;
+        color: white;
+        padding: 100px 0;
+        text-align: center;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .hero-icon {
+        font-size: 4rem;
+        color: #ffeb3b;
+        margin-bottom: 20px;
+    }
+    .feature-card {
+        border: none;
+        transition: transform 0.3s;
+    }
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+</style>
+
+<div class="container">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <i class="bi bi-box-seam-fill hero-icon"></i>
+        <h1 class="display-4 fw-bold">Welcome to BMS</h1>
+        <p class="lead mb-4">Professional Billing & Inventory Management Solution</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'sale_entry' %}" class="btn btn-warning btn-lg px-4 fw-bold">New Sale</a>
+            <a href="{% url 'party_create' %}" class="btn btn-outline-light btn-lg px-4">Add Party</a>
+        </div>
+    </div>
+
+    <!-- Smart Stats -->
+    <div class="row stats-row">
+
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h6>Total Parties</h6>
+                    <h3>{{ total_parties }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h6>Total Sales</h6>
+                    <h3>{{ total_sales }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h6>Total Purchases</h6>
+                    <h3>{{ total_purchases }}</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h6>Total Balance</h6>
+                    <h3>{{ total_balance }}</h3>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

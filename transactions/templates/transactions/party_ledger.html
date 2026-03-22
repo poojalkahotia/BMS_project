@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid p-2">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-form-header text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-journal-text me-2"></i>Party Ledger</h6>
+                     <button onclick="window.print()" class="btn btn-sm btn-light fw-bold"><i class="bi bi-printer-fill me-1"></i>Print / PDF</button>
+                </div>
+                <div class="card-body p-2 bg-light">
+                    <style>
+                        @media print {
+                            body * { visibility: hidden; }
+                            .table-responsive, .table-responsive * { visibility: visible; }
+                            .table-responsive { position: absolute; left: 0; top: 0; width: 100%; height: auto !important; overflow: visible !important; }
+                            .card-header, .card-footer, .navbar, footer, form { display: none !important; }
+                            .card { border: none !important; box-shadow: none !important; }
+                        }
+                    </style>
+                    <!-- Party Selection Form -->
+                    <form method="GET" class="row g-2 align-items-end mb-3">
+                        <div class="col-md-4">
+                            <label for="partySelect" class="form-label fw-bold">Select Party</label>
+                            <select class="form-select form-select-sm select2" id="partySelect" name="party" required>
+                                <option value="">-- Select Party --</option>
+                                {% for party in parties %}
+                                    <option value="{{ party.partyname }}" {% if selected_party == party.partyname %}selected{% endif %}>{{ party.partyname }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary btn-sm fw-bold w-100"><i class="bi bi-search me-1"></i>Show Ledger</button>
+                        </div>
+                    </form>
+
+                    {% if selected_party %}
+                    <!-- Summary Card -->
+                    <div class="card mb-3 border-0 shadow-sm">
+                        <div class="card-body p-2">
+                            <div class="row text-center">
+                                <div class="col border-end">
+                                    <small class="text-muted fw-bold d-block">Opening Balance</small>
+                                    <span class="fw-bold {% if summary.opening_balance > 0 %}text-success{% elif summary.opening_balance < 0 %}text-danger{% endif %}">{{ summary.opening_balance|floatformat:2 }}</span>
+                                </div>
+                                <div class="col border-end">
+                                    <small class="text-muted fw-bold d-block">Total Sale</small>
+                                    <span class="fw-bold text-success">{{ summary.total_sale|floatformat:2 }}</span>
+                                </div>
+                                <div class="col border-end">
+                                    <small class="text-muted fw-bold d-block">Total Purchase</small>
+                                    <span class="fw-bold text-danger">{{ summary.total_purchase|floatformat:2 }}</span>
+                                </div>
+                                <div class="col border-end">
+                                    <small class="text-muted fw-bold d-block">Total Receipt</small>
+                                    <span class="fw-bold text-success">{{ summary.total_receipt|floatformat:2 }}</span>
+                                </div>
+                                <div class="col border-end">
+                                    <small class="text-muted fw-bold d-block">Total Payment</small>
+                                    <span class="fw-bold text-danger">{{ summary.total_payment|floatformat:2 }}</span>
+                                </div>
+                                <div class="col">
+                                    <small class="text-muted fw-bold d-block">Closing Balance</small>
+                                    <span class="fs-6 fw-bold {% if summary.closing_balance > 0 %}text-success{% elif summary.closing_balance < 0 %}text-danger{% endif %}">{{ summary.closing_balance|floatformat:2 }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ledger Table -->
+                    <div class="table-responsive border bg-white rounded h-60vh">
+                        <table class="table table-sm table-hover table-striped mb-0">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="w-50px">Sl</th>
+                                    <th>Date</th>
+                                    <th>Entry No</th>
+                                    <th>Type</th>
+                                    <th>Remark</th>
+                                    <th class="text-end text-success">Dr Amount</th>
+                                    <th class="text-end text-danger">Cr Amount</th>
+                                    <th class="text-end fw-bold">Balance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Opening Balance Row -->
+                                <tr class="table-secondary">
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>OPENING</td>
+                                    <td>Opening Balance</td>
+                                    <td>-</td>
+                                    <td class="text-end">{% if summary.opening_balance > 0 %}{{ summary.opening_balance|floatformat:2 }}{% else %}0.00{% endif %}</td>
+                                    <td class="text-end">{% if summary.opening_balance < 0 %}{{ summary.opening_balance|stringformat:"f"|slice:"1:"|floatformat:2 }}{% else %}0.00{% endif %}</td>
+                                    <td class="text-end fw-bold">{{ summary.opening_balance|floatformat:2 }}</td>
+                                </tr>
+
+                                {% for entry in ledger_data %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ entry.date|date:"d-m-Y" }}</td>
+                                    <td class="fw-bold text-primary">{{ entry.entry_no }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if entry.type == 'Sale' %}bg-success
+                                            {% elif entry.type == 'Purchase' %}bg-primary
+                                            {% elif entry.type == 'Receipt' %}bg-info text-dark
+                                            {% elif entry.type == 'Payment' %}bg-warning text-dark
+                                            {% endif %}">
+                                            {{ entry.type }}
+                                        </span>
+                                    </td>
+                                    <td>{{ entry.remark|default:"-" }}</td>
+                                    <td class="text-end text-success fw-bold">{% if entry.dr_amt > 0 %}{{ entry.dr_amt|floatformat:2 }}{% else %}-{% endif %}</td>
+                                    <td class="text-end text-danger fw-bold">{% if entry.cr_amt > 0 %}{{ entry.cr_amt|floatformat:2 }}{% else %}-{% endif %}</td>
+                                    <td class="text-end fw-bold">{{ entry.balance|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">No Transactions Found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

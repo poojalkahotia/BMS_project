@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-5 col-md-6"> <!-- Constrained width for vertical form look -->
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-form-header text-white py-2">
+                    <h6 class="mb-0 card-title fw-bold"><i class="bi bi-box-seam me-2"></i>Item Master</h6>
+                </div>
+                <div class="card-body p-4 bg-light">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Vertical Layout: Each field in its own row -->
+                        
+                        <!-- Item Name -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Item Name</label>
+                            {{ form.itemname }}
+                            <div class="text-danger small">{{ form.itemname.errors }}</div>
+                        </div>
+
+                        <!-- Company -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Company</label>
+                            {{ form.company }}
+                            <div class="text-danger small">{{ form.company.errors }}</div>
+                        </div>
+
+                        <!-- Category -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Category</label>
+                            {{ form.category }}
+                            <div class="text-danger small">{{ form.category.errors }}</div>
+                        </div>
+
+                        <!-- Opening Stock -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Opening Stock</label>
+                            {{ form.opening_stock }}
+                        </div>
+
+                        <!-- Sale Rate -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Sale Rate</label>
+                            {{ form.sale_rate }}
+                        </div>
+
+                        <!-- Purchase Rate -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Purchase Rate</label>
+                            {{ form.purchase_rate }}
+                        </div>
+
+                        <!-- Reorder -->
+                        <div class="mb-2">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Reorder</label>
+                            {{ form.reorder }}
+                        </div>
+
+                        <!-- Remark -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Remark</label>
+                            {{ form.remark }}
+                        </div>
+
+                        <hr class="my-3 text-muted">
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-center gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm">
+                                <i class="bi bi-save me-1"></i> Save
+                            </button>
+                            <a href="{% url 'item_list' %}" class="btn btn-outline-secondary btn-sm px-4 fw-bold">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Autofocus on Item Name
+    document.addEventListener("DOMContentLoaded", function() {
+        const firstField = document.querySelector('input[name="itemname"]');
+        if (firstField) firstField.focus();
+    });
+</script>
+{% endblock %}

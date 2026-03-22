@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Compact Form Controls */
+    .form-control-sm, .form-select-sm {
+        padding: 0.15rem 0.3rem; 
+        font-size: 0.8rem; 
+        min-height: 24px; 
+    }
+    .form-label { margin-bottom: 0.1rem; font-size: 0.75rem !important; font-weight: bold; }
+    .card-body { padding: 0.5rem !important; }
+    .btn-sm { padding: 0.1rem 0.5rem; font-size: 0.8rem; }
+    .mb-2 { margin-bottom: 0.2rem !important; }
+</style>
+
+<div class="container-fluid p-2">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-form-header text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="bi bi-wallet2 me-2"></i>Payment Entry</h6>
+                    <a href="{% url 'payment_list' %}" class="btn btn-light btn-sm fw-bold"><i class="bi bi-list me-1"></i>List</a>
+                </div>
+                <div class="card-body bg-light">
+                    <form id="paymentForm">
+                        <div class="row g-2 mb-2">
+                            <!-- Entry No -->
+                            <div class="col-md-6">
+                                <label for="entryNo" class="form-label">Entry No</label>
+                                <input type="text" class="form-control form-control-sm fw-bold text-danger" id="entryNo" value="{{ next_entry }}" readonly>
+                            </div>
+                            <!-- Date -->
+                            <div class="col-md-6">
+                                <label for="entryDate" class="form-label">Date</label>
+                                <input type="date" class="form-control form-control-sm" id="entryDate" autofocus>
+                            </div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="partySelect" class="form-label">Party Name</label>
+                            <select class="form-select form-select-sm select2" id="partySelect">
+                                <option value="">-- Select Party --</option>
+                                {% for party in parties %}
+                                    <option value="{{ party.partyname }}">{{ party.partyname }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="amount" class="form-label">Amount</label>
+                            <input type="number" class="form-control form-control-sm text-end" id="amount" placeholder="0.00" step="0.01">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="remark" class="form-label">Remark</label>
+                            <textarea class="form-control form-control-sm" id="remark" rows="3"></textarea>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="button" class="btn btn-secondary btn-sm me-1" onclick="window.location.reload()" tabindex="-1">Cancel</button>
+                            <button type="button" id="btnSave" class="btn btn-primary btn-sm" onclick="savePayment()">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ payment_data|json_script:"payment-data" }}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const today = new Date();
+        document.getElementById('entryDate').valueAsDate = today;
+
+        const paymentDataInfo = document.getElementById('payment-data');
+        if (paymentDataInfo) {
+            const paymentData = JSON.parse(paymentDataInfo.textContent);
+            if (paymentData) {
+                 // Pre-fill for Edit Mode
+                document.getElementById('entryDate').value = paymentData.date;
+                document.getElementById('partySelect').value = paymentData.party_name;
+                document.getElementById('amount').value = paymentData.amount;
+                document.getElementById('remark').value = paymentData.remark;
+            }
+        }
+    });
+
+    function savePayment() {
+        const entryNo = document.getElementById('entryNo').value;
+        const date = document.getElementById('entryDate').value;
+        const partyName = document.getElementById('partySelect').value;
+        const amount = parseFloat(document.getElementById('amount').value) || 0;
+        const remark = document.getElementById('remark').value;
+
+        if (!partyName) { alert("Please select a Party."); return; }
+        if (amount <= 0) { alert("Please enter a valid amount."); return; }
+
+        const payload = {
+            entry_no: entryNo,
+            date: date,
+            party_name: partyName,
+            amount: amount,
+            remark: remark
+        };
+
+        fetch('/payment/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert(data.message);
+                if (data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                } else {
+                    window.location.href = "{% url 'payment_list' %}";
+                }
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

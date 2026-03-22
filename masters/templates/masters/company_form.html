@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Form Section -->
+        <div class="col-lg-5 col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-form-header text-white py-2">
+                    <h6 class="mb-0 card-title fw-bold"><i class="bi bi-building me-2"></i>Company Master</h6>
+                </div>
+                <div class="card-body p-4 bg-light">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Company Name -->
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold mb-1 text-secondary">Company Name</label>
+                            {{ form.companyname }}
+                            <div class="text-danger small">{{ form.companyname.errors }}</div>
+                        </div>
+
+                        <hr class="my-3 text-muted">
+
+                        <!-- Buttons -->
+                        <div class="d-flex justify-content-center gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm">
+                                <i class="bi bi-save me-1"></i> Save
+                            </button>
+                            <a href="/" class="btn btn-outline-secondary btn-sm px-4 fw-bold">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- List Section -->
+        <div class="col-lg-7 col-md-6">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-form-header text-white py-2">
+                    <h6 class="mb-0 card-title fw-bold"><i class="bi bi-list-ul me-2"></i>Company List</h6>
+                </div>
+                <div class="card-body p-0 bg-light">
+                    {% if companies %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-secondary fw-bold small">Company Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for company in companies %}
+                                    <tr>
+                                        <td class="small">{{ company.companyname }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="p-4 text-center text-muted">
+                            <i class="bi bi-inbox fs-2rem"></i>
+                            <p class="mt-2 small">No companies added yet</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Autofocus on Company Name
+    document.addEventListener("DOMContentLoaded", function() {
+        const firstField = document.querySelector('input[name="companyname"]');
+        if (firstField) firstField.focus();
+    });
+</script>
+{% endblock %}
+
