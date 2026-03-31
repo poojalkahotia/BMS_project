@@ -5,11 +5,13 @@ urlpatterns = [
     path('sale/entry/', views.sale_entry, name='sale_entry'),
     path('sale/edit/<str:pk>/', views.sale_entry, name='sale_edit'),
     path('sale/save/', views.save_sale, name='save_sale'),
+    path('sale/delete/<str:pk>/', views.delete_sale, name='delete_sale'),
     path('sale/list/', views.sale_list, name='sale_list'),
     
     path('purchase/entry/', views.purchase_entry, name='purchase_entry'),
     path('purchase/edit/<str:pk>/', views.purchase_edit, name='purchase_edit'),
     path('purchase/save/', views.save_purchase, name='save_purchase'),
+    path('purchase/delete/<str:pk>/', views.delete_purchase, name='delete_purchase'),
     path('purchase/list/', views.purchase_list, name='purchase_list'),
     path('receipt/entry/', views.receipt_entry, name='receipt_entry'),
     path('receipt/edit/<str:pk>/', views.receipt_entry, name='receipt_edit'),
@@ -25,4 +27,9 @@ urlpatterns = [
     path('party-balance/', views.party_balance_list, name='party_balance_list'),
     path('current-stock/', views.current_stock_report, name='current_stock_report'),
     path('item-ledger/', views.item_ledger, name='item_ledger'),
+    # CSV Exports
+    path('export/sale-csv/', views.export_sale_csv, name='export_sale_csv'),
+    path('export/purchase-csv/', views.export_purchase_csv, name='export_purchase_csv'),
+    path('export/party-balance-csv/', views.export_party_balance_csv, name='export_party_balance_csv'),
+    path('export/stock-csv/', views.export_stock_csv, name='export_stock_csv'),
 ]

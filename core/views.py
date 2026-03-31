@@ -19,6 +19,9 @@ def home(request):
     context["total_sales"] = SaleMaster.objects.count()
     context["total_purchases"] = PurchaseMaster.objects.count()
     
+    context["total_sale_amount"] = SaleMaster.objects.aggregate(total=Sum("net_amount"))["total"] or 0
+    context["total_purchase_amount"] = PurchaseMaster.objects.aggregate(total=Sum("net_amount"))["total"] or 0
+    
     total_receipts = Receipt.objects.aggregate(total=Sum("amount"))["total"] or 0
     total_payments = Payment.objects.aggregate(total=Sum("amount"))["total"] or 0
     context["total_balance"] = total_receipts - total_payments
@@ -46,6 +49,5 @@ def login_view(request):
 @require_http_methods(["POST"])
 def logout_view(request):
     logout(request)
-    # Using Django messages framework to pass the success toast
     messages.success(request, "You have been logged out successfully.")
     return redirect('login')

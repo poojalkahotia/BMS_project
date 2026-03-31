@@ -1,0 +1,56 @@
+/* Print Stylesheet — hides non-essential UI elements when printing */
+@media print {
+    /* Hide navigation, buttons, forms, footers */
+    .navbar,
+    .navbar *,
+    footer,
+    .btn,
+    .no-print,
+    form:not(.print-keep),
+    .pagination,
+    .toast-container,
+    .global-search-form {
+        display: none !important;
+    }
+
+    /* Remove shadows and borders for cleaner print */
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .card-header {
+        background: #333 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Full width table */
+    .table-responsive {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    .container-fluid {
+        padding: 0 !important;
+    }
+
+    /* Ensure table fits page */
+    table {
+        width: 100% !important;
+        font-size: 11px !important;
+    }
+
+    /* Keep table header background */
+    thead th {
+        background: #eee !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+    }
+}

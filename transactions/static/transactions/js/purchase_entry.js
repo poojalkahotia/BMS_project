@@ -1,5 +1,20 @@
 // Purchase Entry JavaScript Logic
 
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     // Set default date and time
     if (!document.getElementById('invDate').value) {
@@ -66,7 +81,11 @@ function fetchPartyDetails() {
         clearPartyDetails();
         return;
     }
-    fetch(`/api/party-details/?party_name=${encodeURIComponent(partyName)}`)
+    fetch(`/api/party-details/?party_name=${encodeURIComponent(partyName)}`, {
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
         .then(response => response.json())
         .then(data => {
             document.getElementById('partyAdd1').value = data.add1 || '';
@@ -89,7 +108,11 @@ function fetchItemDetails() {
     const itemName = document.getElementById('itemSelect').value;
     if (!itemName) return;
     
-    fetch(`/api/item-details/?item_name=${encodeURIComponent(itemName)}`)
+    fetch(`/api/item-details/?item_name=${encodeURIComponent(itemName)}`, {
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
         .then(response => response.json())
         .then(data => {
             document.getElementById('itemRate').value = data.rate || 0;
@@ -362,6 +385,7 @@ function savePurchase() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
         },
         body: JSON.stringify(payload)
     })

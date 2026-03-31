@@ -1,14 +1,29 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.core.paginator import Paginator
 from .models import SaleMaster, SaleDetail, PurchaseMaster, PurchaseDetail, Receipt, Payment
 from masters.models import Party, Item
 import json
+import re
 from datetime import datetime
+
+
+def _next_number(model, field, prefix):
+    """Generate next sequential number using MAX, not COUNT, to avoid collisions after deletions."""
+    from django.db.models import Max
+    result = model.objects.aggregate(max_val=Max(field))
+    last = result.get('max_val')
+    if last:
+        match = re.search(r'(\d+)$', str(last))
+        if match:
+            return f"{prefix}{int(match.group(1)) + 1:04d}"
+    return f"{prefix}0001"
 
 # --- SALE VIEWS ---
 
+@login_required(login_url='login')
 def sale_entry(request, pk=None):
     parties = Party.objects.all().order_by('partyname')
     items = Item.objects.all().order_by('itemname')
@@ -42,9 +57,8 @@ def sale_entry(request, pk=None):
         }
         sale_data = json.dumps(sale_data) # Serialize to JSON string
     else:
-        # Generate next Invoice Number (Simple logic: Count + 1)
-        last_inv = SaleMaster.objects.all().count()
-        next_inv = f"INV-{last_inv + 1:04d}"
+        # Generate next Invoice Number using MAX to avoid collisions
+        next_inv = _next_number(SaleMaster, 'invno', 'INV-')
     
     return render(request, 'transactions/sale_entry.html', {
         'parties': parties,
@@ -54,7 +68,7 @@ def sale_entry(request, pk=None):
         'sale_data': sale_data # Pass JSON string
     })
 
-@csrf_exempt
+@login_required(login_url='login')
 def save_sale(request):
     if request.method == 'POST':
         try:
@@ -65,8 +79,7 @@ def save_sale(request):
                 
                 # Determine inv_no
                 if data['inv_no'] == 'New':
-                    last_inv_count = SaleMaster.objects.all().count()
-                    final_inv_no = f"INV-{last_inv_count + 1:04d}"
+                    final_inv_no = _next_number(SaleMaster, 'invno', 'INV-')
                     is_update = False
                 else:
                     final_inv_no = data['inv_no']
@@ -120,28 +133,50 @@ def save_sale(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid Request'})
 
+@login_required(login_url='login')
+def delete_sale(request, pk):
+    from django.contrib import messages
+    if request.method == 'POST':
+        sale = get_object_or_404(SaleMaster, pk=pk)
+        sale.delete()
+        messages.success(request, 'Sale Deleted Successfully!')
+    return redirect('sale_list')
+
+@login_required(login_url='login')
 def sale_list(request):
     sort = request.GET.get("sort", "-invdate")
     direction = request.GET.get("direction", "desc")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
     
     order = sort if direction == "asc" else f"-{sort}"
-    # Default sorting is complex because of original code having '-invdate', '-invno'
-    # Fallback to secondary if needed, or stick to simple sorting as requested.
     if sort == "-invdate":
         order = "-invdate" # default
     
-    sales = SaleMaster.objects.all().order_by(order, '-invno').prefetch_related('details__itemname')
+    sales = SaleMaster.objects.all()
+    if from_date:
+        sales = sales.filter(invdate__gte=from_date)
+    if to_date:
+        sales = sales.filter(invdate__lte=to_date)
+        
+    sales = sales.order_by(order, '-invno').prefetch_related('details__itemname')
+    paginator = Paginator(sales, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     return render(request, 'transactions/sale_list.html', {
-        'sales': sales,
+        'sales': page_obj,
+        'page_obj': page_obj,
         'current_sort': sort,
         'current_direction': direction
     })
 
 # --- PURCHASE VIEWS ---
 
+@login_required(login_url='login')
 def purchase_edit(request, pk):
     return purchase_entry(request, pk=pk)
 
+@login_required(login_url='login')
 def purchase_entry(request, pk=None):
     parties = Party.objects.all().order_by('partyname')
     items = Item.objects.all().order_by('itemname')
@@ -175,9 +210,8 @@ def purchase_entry(request, pk=None):
         }
         purchase_data = json.dumps(purchase_data)
     else:
-        # Generate next Invoice Number (Simple logic: Count + 1)
-        last_inv = PurchaseMaster.objects.all().count()
-        next_inv = f"PUR-{last_inv + 1:04d}"
+        # Generate next Invoice Number using MAX to avoid collisions
+        next_inv = _next_number(PurchaseMaster, 'invno', 'PUR-')
     
     return render(request, 'transactions/purchase_entry.html', {
         'parties': parties,
@@ -187,7 +221,7 @@ def purchase_entry(request, pk=None):
         'purchase_data': purchase_data
     })
 
-@csrf_exempt
+@login_required(login_url='login')
 def save_purchase(request):
     if request.method == 'POST':
         try:
@@ -198,8 +232,7 @@ def save_purchase(request):
                 
                 # Determine inv_no
                 if data['inv_no'] == 'New':
-                    last_inv_count = PurchaseMaster.objects.all().count()
-                    final_inv_no = f"PUR-{last_inv_count + 1:04d}"
+                    final_inv_no = _next_number(PurchaseMaster, 'invno', 'PUR-')
                     is_update = False
                 else:
                     final_inv_no = data['inv_no']
@@ -250,23 +283,46 @@ def save_purchase(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid Request'})
 
+@login_required(login_url='login')
+def delete_purchase(request, pk):
+    from django.contrib import messages
+    if request.method == 'POST':
+        purchase = get_object_or_404(PurchaseMaster, pk=pk)
+        purchase.delete()
+        messages.success(request, 'Purchase Deleted Successfully!')
+    return redirect('purchase_list')
+
+@login_required(login_url='login')
 def purchase_list(request):
     sort = request.GET.get("sort", "-invdate")
     direction = request.GET.get("direction", "desc")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
     
     order = sort if direction == "asc" else f"-{sort}"
     if sort == "-invdate":
         order = "-invdate"
         
-    purchases = PurchaseMaster.objects.all().order_by(order, '-invno').prefetch_related('details__itemname')
+    purchases = PurchaseMaster.objects.all()
+    if from_date:
+        purchases = purchases.filter(invdate__gte=from_date)
+    if to_date:
+        purchases = purchases.filter(invdate__lte=to_date)
+        
+    purchases = purchases.order_by(order, '-invno').prefetch_related('details__itemname')
+    paginator = Paginator(purchases, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     return render(request, 'transactions/purchase_list.html', {
-        'purchases': purchases,
+        'purchases': page_obj,
+        'page_obj': page_obj,
         'current_sort': sort,
         'current_direction': direction
     })
 
 # --- RECEIPT VIEWS ---
 
+@login_required(login_url='login')
 def receipt_entry(request, pk=None):
     parties = Party.objects.all().order_by('partyname')
     
@@ -284,9 +340,8 @@ def receipt_entry(request, pk=None):
             'remark': receipt.remark or ''
         }
     else:
-        # Generate next Entry Number
-        last_entry = Receipt.objects.all().count()
-        next_entry = f"REC-{last_entry + 1:04d}"
+        # Generate next Entry Number using MAX to avoid collisions
+        next_entry = _next_number(Receipt, 'entry_no', 'REC-')
     
     return render(request, 'transactions/receipt_entry.html', {
         'parties': parties,
@@ -295,7 +350,7 @@ def receipt_entry(request, pk=None):
         'receipt_data': receipt_data
     })
 
-@csrf_exempt
+@login_required(login_url='login')
 def save_receipt(request):
     if request.method == 'POST':
         try:
@@ -323,7 +378,7 @@ def save_receipt(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid Request'})
 
-@csrf_exempt
+@login_required(login_url='login')
 def delete_receipt(request, pk):
     if request.method == 'POST':
         try:
@@ -336,23 +391,37 @@ def delete_receipt(request, pk):
             return JsonResponse({'status': 'error', 'message': str(e)})
     return JsonResponse({'status': 'error', 'message': 'Invalid Request'})
 
+@login_required(login_url='login')
 def receipt_list(request):
     sort = request.GET.get("sort", "-date")
     direction = request.GET.get("direction", "desc")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
     
     order = sort if direction == "asc" else f"-{sort}"
     if sort == "-date":
         order = "-date"
         
-    receipts = Receipt.objects.all().order_by(order, '-entry_no')
+    receipts = Receipt.objects.all()
+    if from_date:
+        receipts = receipts.filter(date__gte=from_date)
+    if to_date:
+        receipts = receipts.filter(date__lte=to_date)
+        
+    receipts = receipts.order_by(order, '-entry_no')
+    paginator = Paginator(receipts, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     return render(request, 'transactions/receipt_list.html', {
-        'receipts': receipts,
+        'receipts': page_obj,
+        'page_obj': page_obj,
         'current_sort': sort,
         'current_direction': direction
     })
 
 # --- PAYMENT VIEWS ---
 
+@login_required(login_url='login')
 def payment_entry(request, pk=None):
     parties = Party.objects.all().order_by('partyname')
     
@@ -370,9 +439,8 @@ def payment_entry(request, pk=None):
             'remark': payment.remark or ''
         }
     else:
-        # Generate next Entry Number
-        last_entry = Payment.objects.all().count()
-        next_entry = f"PAY-{last_entry + 1:04d}"
+        # Generate next Entry Number using MAX to avoid collisions
+        next_entry = _next_number(Payment, 'entry_no', 'PAY-')
     
     return render(request, 'transactions/payment_entry.html', {
         'parties': parties,
@@ -381,7 +449,7 @@ def payment_entry(request, pk=None):
         'payment_data': payment_data
     })
 
-@csrf_exempt
+@login_required(login_url='login')
 def save_payment(request):
     if request.method == 'POST':
         try:
@@ -409,7 +477,7 @@ def save_payment(request):
     
     return JsonResponse({'status': 'error', 'message': 'Invalid Request'})
 
-@csrf_exempt
+@login_required(login_url='login')
 def delete_payment(request, pk):
     if request.method == 'POST':
         try:
@@ -423,24 +491,40 @@ def delete_payment(request, pk):
             
     return JsonResponse({'status': 'error', 'message': 'Invalid Request'})
 
+@login_required(login_url='login')
 def payment_list(request):
     sort = request.GET.get("sort", "-date")
     direction = request.GET.get("direction", "desc")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
     
     order = sort if direction == "asc" else f"-{sort}"
     if sort == "-date":
         order = "-date"
         
-    payments = Payment.objects.all().order_by(order, '-entry_no')
+    payments = Payment.objects.all()
+    if from_date:
+        payments = payments.filter(date__gte=from_date)
+    if to_date:
+        payments = payments.filter(date__lte=to_date)
+        
+    payments = payments.order_by(order, '-entry_no')
+    paginator = Paginator(payments, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     return render(request, 'transactions/payment_list.html', {
-        'payments': payments,
+        'payments': page_obj,
+        'page_obj': page_obj,
         'current_sort': sort,
         'current_direction': direction
     })
 
+@login_required(login_url='login')
 def party_ledger(request):
     parties = Party.objects.all().order_by('partyname')
     selected_party_name = request.GET.get('party')
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
     
     ledger_data = []
     summary = {
@@ -458,15 +542,36 @@ def party_ledger(request):
         # Opening Balance
         op_dr = party.openingdr or 0
         op_cr = party.openingcr or 0
-        summary['opening_balance'] = op_dr - op_cr
-        
-        running_balance = summary['opening_balance']
+        opening_balance = op_dr - op_cr
         
         # Fetch Transactions
         sales = SaleMaster.objects.filter(party=party)
         purchases = PurchaseMaster.objects.filter(party=party)
         receipts = Receipt.objects.filter(party=party)
         payments = Payment.objects.filter(party=party)
+        
+        if from_date:
+            from django.db.models import Sum
+            past_sales = sales.filter(invdate__lt=from_date).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+            past_purchases = purchases.filter(invdate__lt=from_date).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+            past_receipts = receipts.filter(date__lt=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+            past_payments = payments.filter(date__lt=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+            
+            opening_balance = opening_balance + past_sales + past_payments - past_purchases - past_receipts
+            
+            sales = sales.filter(invdate__gte=from_date)
+            purchases = purchases.filter(invdate__gte=from_date)
+            receipts = receipts.filter(date__gte=from_date)
+            payments = payments.filter(date__gte=from_date)
+            
+        if to_date:
+            sales = sales.filter(invdate__lte=to_date)
+            purchases = purchases.filter(invdate__lte=to_date)
+            receipts = receipts.filter(date__lte=to_date)
+            payments = payments.filter(date__lte=to_date)
+            
+        summary['opening_balance'] = opening_balance
+        running_balance = summary['opening_balance']
         
         # Process Sales (Debit)
         for sale in sales:
@@ -533,9 +638,12 @@ def party_ledger(request):
         'summary': summary
     })
 
+@login_required(login_url='login')
 def party_balance_list(request):
     sort = request.GET.get("sort", "partyname")
     direction = request.GET.get("direction", "asc")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
     
     order = sort if direction == "asc" else f"-{sort}"
     
@@ -566,14 +674,36 @@ def party_balance_list(request):
         opening_bal = op_dr - op_cr
         
         # Transactions
-        # Optimizing: Ideally use aggregation, but for simplicity looping as per plan or using aggregate here
-        # using aggregate for better performance than loading all objects
         from django.db.models import Sum
         
-        sale_sum = SaleMaster.objects.filter(party=party).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
-        purchase_sum = PurchaseMaster.objects.filter(party=party).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
-        receipt_sum = Receipt.objects.filter(party=party).aggregate(Sum('amount'))['amount__sum'] or 0
-        payment_sum = Payment.objects.filter(party=party).aggregate(Sum('amount'))['amount__sum'] or 0
+        sale_qs = SaleMaster.objects.filter(party=party)
+        purchase_qs = PurchaseMaster.objects.filter(party=party)
+        receipt_qs = Receipt.objects.filter(party=party)
+        payment_qs = Payment.objects.filter(party=party)
+        
+        if from_date:
+            past_sales = sale_qs.filter(invdate__lt=from_date).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+            past_purchases = purchase_qs.filter(invdate__lt=from_date).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+            past_receipts = receipt_qs.filter(date__lt=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+            past_payments = payment_qs.filter(date__lt=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+            
+            opening_bal = opening_bal + past_sales + past_payments - past_purchases - past_receipts
+            
+            sale_qs = sale_qs.filter(invdate__gte=from_date)
+            purchase_qs = purchase_qs.filter(invdate__gte=from_date)
+            receipt_qs = receipt_qs.filter(date__gte=from_date)
+            payment_qs = payment_qs.filter(date__gte=from_date)
+            
+        if to_date:
+            sale_qs = sale_qs.filter(invdate__lte=to_date)
+            purchase_qs = purchase_qs.filter(invdate__lte=to_date)
+            receipt_qs = receipt_qs.filter(date__lte=to_date)
+            payment_qs = payment_qs.filter(date__lte=to_date)
+            
+        sale_sum = sale_qs.aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+        purchase_sum = purchase_qs.aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+        receipt_sum = receipt_qs.aggregate(Sum('amount'))['amount__sum'] or 0
+        payment_sum = payment_qs.aggregate(Sum('amount'))['amount__sum'] or 0
         
         # Closing Balance calculation
         # Closing = Opening + Debit (Sale, Payment) - Credit (Purchase, Receipt)
@@ -618,22 +748,30 @@ def party_balance_list(request):
         'closing': total_closing
     }
 
+    paginator = Paginator(party_balances, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'transactions/party_balance_list.html', {
-        'party_balances': party_balances,
+        'party_balances': page_obj,
+        'page_obj': page_obj,
         'grand_totals': grand_totals,
         'current_sort': sort,
         'current_direction': direction
     })
 
+@login_required(login_url='login')
 def current_stock_report(request):
     sort = request.GET.get("sort", "item_name")
     direction = request.GET.get("direction", "asc")
+    from_date = request.GET.get("from_date")
+    to_date = request.GET.get("to_date")
     
     order = sort if direction == "asc" else f"-{sort}"
     
+    # Base query
     items = Item.objects.all()
     if sort == "item_name":
-        # Note: Model field is 'itemname'
         items = items.order_by("itemname" if direction == "asc" else "-itemname")
     else:
         items = items.order_by('itemname')
@@ -648,13 +786,23 @@ def current_stock_report(request):
         if op_stock is None:
             op_stock = 0
 
-        # Purchase Qty (Sum of PurchaseDetail qty for this item)
-        purchase_qty_agg = PurchaseDetail.objects.filter(itemname=item).aggregate(Sum('qty'))['qty__sum']
-        purchase_qty = purchase_qty_agg if purchase_qty_agg is not None else 0
+        pur_qs = PurchaseDetail.objects.filter(itemname=item)
+        sal_qs = SaleDetail.objects.filter(itemname=item)
+        
+        if from_date:
+            past_pur = pur_qs.filter(invno__invdate__lt=from_date).aggregate(Sum('qty'))['qty__sum'] or 0
+            past_sal = sal_qs.filter(invno__invdate__lt=from_date).aggregate(Sum('qty'))['qty__sum'] or 0
+            op_stock = op_stock + past_pur - past_sal
+            
+            pur_qs = pur_qs.filter(invno__invdate__gte=from_date)
+            sal_qs = sal_qs.filter(invno__invdate__gte=from_date)
+            
+        if to_date:
+            pur_qs = pur_qs.filter(invno__invdate__lte=to_date)
+            sal_qs = sal_qs.filter(invno__invdate__lte=to_date)
 
-        # Sale Qty (Sum of SaleDetail qty for this item)
-        sale_qty_agg = SaleDetail.objects.filter(itemname=item).aggregate(Sum('qty'))['qty__sum']
-        sale_qty = sale_qty_agg if sale_qty_agg is not None else 0
+        purchase_qty = pur_qs.aggregate(Sum('qty'))['qty__sum'] or 0
+        sale_qty = sal_qs.aggregate(Sum('qty'))['qty__sum'] or 0
 
         # Closing Stock logic: Op + Purchase - Sale
         closing_stock = op_stock + purchase_qty - sale_qty
@@ -679,15 +827,23 @@ def current_stock_report(request):
         elif sort == "closing_stock":
             stock_data.sort(key=lambda x: x['closing_stock'], reverse=reverse_sort)
 
+    paginator = Paginator(stock_data, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
     return render(request, 'transactions/current_stock_list.html', {
-        'stock_data': stock_data,
+        'stock_data': page_obj,
+        'page_obj': page_obj,
         'current_sort': sort,
         'current_direction': direction
     })
 
+@login_required(login_url='login')
 def item_ledger(request):
     items = Item.objects.all().order_by('itemname')
     selected_item_name = request.GET.get('item')
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
     
     ledger_data = []
     summary = {
@@ -701,14 +857,29 @@ def item_ledger(request):
         item = get_object_or_404(Item, itemname=selected_item_name)
         
         # Opening Stock
-        summary['opening_stock'] = item.opening_stock or 0
-        running_stock = summary['opening_stock']
+        op_stock = item.opening_stock or 0
         
         # Fetch Transactions
         # Sale -> Out
         # Purchase -> In
         sale_details = SaleDetail.objects.filter(itemname=item).select_related('invno')
         purchase_details = PurchaseDetail.objects.filter(itemname=item).select_related('invno')
+        
+        if from_date:
+            from django.db.models import Sum
+            past_pur = purchase_details.filter(invno__invdate__lt=from_date).aggregate(Sum('qty'))['qty__sum'] or 0
+            past_sal = sale_details.filter(invno__invdate__lt=from_date).aggregate(Sum('qty'))['qty__sum'] or 0
+            op_stock = op_stock + past_pur - past_sal
+            
+            sale_details = sale_details.filter(invno__invdate__gte=from_date)
+            purchase_details = purchase_details.filter(invno__invdate__gte=from_date)
+            
+        if to_date:
+            sale_details = sale_details.filter(invno__invdate__lte=to_date)
+            purchase_details = purchase_details.filter(invno__invdate__lte=to_date)
+            
+        summary['opening_stock'] = op_stock
+        running_stock = summary['opening_stock']
         
         # Process Sales (Out)
         for detail in sale_details:
@@ -752,3 +923,127 @@ def item_ledger(request):
         'ledger_data': ledger_data,
         'summary': summary
     })
+
+
+# --- CSV EXPORT VIEWS ---
+import csv
+
+@login_required(login_url='login')
+def export_sale_csv(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="sale_list.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Inv No', 'Date', 'Party', 'Items', 'Net Amount'])
+
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    sales = SaleMaster.objects.all().order_by('-invdate', '-invno').prefetch_related('details__itemname')
+    if from_date:
+        sales = sales.filter(invdate__gte=from_date)
+    if to_date:
+        sales = sales.filter(invdate__lte=to_date)
+
+    for sale in sales:
+        items_str = ', '.join([d.itemname.itemname for d in sale.details.all()])
+        writer.writerow([sale.invno, sale.invdate, sale.partyname, items_str, sale.net_amount])
+    return response
+
+@login_required(login_url='login')
+def export_purchase_csv(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="purchase_list.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Inv No', 'Date', 'Party', 'Items', 'Net Amount'])
+
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+    purchases = PurchaseMaster.objects.all().order_by('-invdate', '-invno').prefetch_related('details__itemname')
+    if from_date:
+        purchases = purchases.filter(invdate__gte=from_date)
+    if to_date:
+        purchases = purchases.filter(invdate__lte=to_date)
+
+    for purchase in purchases:
+        items_str = ', '.join([d.itemname.itemname for d in purchase.details.all()])
+        writer.writerow([purchase.invno, purchase.invdate, purchase.partyname, items_str, purchase.net_amount])
+    return response
+
+@login_required(login_url='login')
+def export_party_balance_csv(request):
+    from django.db.models import Sum
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="party_balance.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Party Name', 'Opening Balance', 'Sale', 'Purchase', 'Receipt', 'Payment', 'Closing Balance'])
+
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+
+    for party in Party.objects.all().order_by('partyname'):
+        op_dr = party.openingdr or 0
+        op_cr = party.openingcr or 0
+        opening_bal = op_dr - op_cr
+
+        sale_qs = SaleMaster.objects.filter(party=party)
+        purchase_qs = PurchaseMaster.objects.filter(party=party)
+        receipt_qs = Receipt.objects.filter(party=party)
+        payment_qs = Payment.objects.filter(party=party)
+
+        if from_date:
+            past_sales = sale_qs.filter(invdate__lt=from_date).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+            past_purchases = purchase_qs.filter(invdate__lt=from_date).aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+            past_receipts = receipt_qs.filter(date__lt=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+            past_payments = payment_qs.filter(date__lt=from_date).aggregate(Sum('amount'))['amount__sum'] or 0
+            opening_bal = opening_bal + past_sales + past_payments - past_purchases - past_receipts
+            sale_qs = sale_qs.filter(invdate__gte=from_date)
+            purchase_qs = purchase_qs.filter(invdate__gte=from_date)
+            receipt_qs = receipt_qs.filter(date__gte=from_date)
+            payment_qs = payment_qs.filter(date__gte=from_date)
+
+        if to_date:
+            sale_qs = sale_qs.filter(invdate__lte=to_date)
+            purchase_qs = purchase_qs.filter(invdate__lte=to_date)
+            receipt_qs = receipt_qs.filter(date__lte=to_date)
+            payment_qs = payment_qs.filter(date__lte=to_date)
+
+        sale_sum = sale_qs.aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+        purchase_sum = purchase_qs.aggregate(Sum('net_amount'))['net_amount__sum'] or 0
+        receipt_sum = receipt_qs.aggregate(Sum('amount'))['amount__sum'] or 0
+        payment_sum = payment_qs.aggregate(Sum('amount'))['amount__sum'] or 0
+        closing_bal = opening_bal + sale_sum + payment_sum - purchase_sum - receipt_sum
+
+        writer.writerow([party.partyname, opening_bal, sale_sum, purchase_sum, receipt_sum, payment_sum, closing_bal])
+    return response
+
+@login_required(login_url='login')
+def export_stock_csv(request):
+    from django.db.models import Sum
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="current_stock.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Item Name', 'Opening Stock', 'Purchase Qty', 'Sale Qty', 'Closing Stock'])
+
+    from_date = request.GET.get('from_date')
+    to_date = request.GET.get('to_date')
+
+    for item in Item.objects.all().order_by('itemname'):
+        op_stock = item.opening_stock or 0
+        pur_qs = PurchaseDetail.objects.filter(itemname=item)
+        sal_qs = SaleDetail.objects.filter(itemname=item)
+
+        if from_date:
+            past_pur = pur_qs.filter(invno__invdate__lt=from_date).aggregate(Sum('qty'))['qty__sum'] or 0
+            past_sal = sal_qs.filter(invno__invdate__lt=from_date).aggregate(Sum('qty'))['qty__sum'] or 0
+            op_stock = op_stock + past_pur - past_sal
+            pur_qs = pur_qs.filter(invno__invdate__gte=from_date)
+            sal_qs = sal_qs.filter(invno__invdate__gte=from_date)
+        if to_date:
+            pur_qs = pur_qs.filter(invno__invdate__lte=to_date)
+            sal_qs = sal_qs.filter(invno__invdate__lte=to_date)
+
+        purchase_qty = pur_qs.aggregate(Sum('qty'))['qty__sum'] or 0
+        sale_qty = sal_qs.aggregate(Sum('qty'))['qty__sum'] or 0
+        closing_stock = op_stock + purchase_qty - sale_qty
+
+        writer.writerow([item.itemname, op_stock, purchase_qty, sale_qty, closing_stock])
+    return response

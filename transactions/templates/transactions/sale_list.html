@@ -8,9 +8,30 @@
             <div class="card shadow-sm border-0">
                 <div class="card-header bg-form-header text-white py-2 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold"><i class="bi bi-list-check me-2"></i>Sale Data List</h6>
-                    <a href="{% url 'sale_entry' %}" class="btn btn-light btn-sm fw-bold"><i class="bi bi-plus-lg me-1"></i>New Entry</a>
+                    <div class="d-flex gap-2">
+                        <a href="{% url 'export_sale_csv' %}?from_date={{ request.GET.from_date }}&to_date={{ request.GET.to_date }}" class="btn btn-success btn-sm fw-bold no-print"><i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV</a>
+                        <button onclick="window.print()" class="btn btn-light btn-sm fw-bold no-print"><i class="bi bi-printer-fill me-1"></i>Print</button>
+                        <a href="{% url 'sale_entry' %}" class="btn btn-light btn-sm fw-bold no-print"><i class="bi bi-plus-lg me-1"></i>New Entry</a>
+                    </div>
                 </div>
                 <div class="card-body p-2 bg-light">
+                    <!-- Date Filter Form -->
+                    <form method="get" class="row g-2 align-items-end mb-3 px-2">
+                        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+                        {% if current_direction %}<input type="hidden" name="direction" value="{{ current_direction }}">{% endif %}
+                        <div class="col-auto">
+                            <label class="form-label fw-bold mb-0">From Date</label>
+                            <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request.GET.from_date }}">
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label fw-bold mb-0">To Date</label>
+                            <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request.GET.to_date }}">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-filter me-1"></i>Filter</button>
+                            <a href="?" class="btn btn-secondary btn-sm fw-bold">Reset</a>
+                        </div>
+                    </form>
                     <div class="table-responsive border bg-white rounded h-75vh">
                         <table class="table table-sm table-hover table-striped mb-0">
                             <thead class="table-light sticky-top">
@@ -65,7 +86,10 @@
                                     <td class="text-end fw-bold">{{ sale.net_amount }}</td>
                                     <td class="text-center">
                                         <a href="{% url 'sale_edit' sale.invno %}" class="btn btn-sm btn-outline-primary py-0" title="Edit"><i class="bi bi-pencil-square"></i></a>
-                                        <button class="btn btn-sm btn-outline-danger py-0" title="Delete"><i class="bi bi-trash"></i></button>
+                                        <form action="{% url 'delete_sale' sale.invno %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete Sale Invoice {{ sale.invno }}? This action cannot be undone.');">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0" title="Delete"><i class="bi bi-trash"></i></button>
+                                        </form>
                                     </td>
                                 </tr>
                                 {% empty %}
@@ -76,9 +100,12 @@
                             </tbody>
                         </table>
                     </div>
+                    {% include 'includes/pagination.html' %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+
 {% endblock %}

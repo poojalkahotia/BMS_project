@@ -11,7 +11,8 @@
                     <h6 class="mb-0 fw-bold"><i class="bi bi-people-fill me-2"></i>All Party Balance Report</h6>
                     <div class="d-flex gap-2">
                          <span class="badge bg-light text-dark fw-bold align-self-center">{{ party_balances|length }} Parties</span>
-                         <button onclick="window.print()" class="btn btn-sm btn-light fw-bold"><i class="bi bi-printer-fill me-1"></i>Print / PDF</button>
+                         <a href="{% url 'export_party_balance_csv' %}?from_date={{ request.GET.from_date }}&to_date={{ request.GET.to_date }}" class="btn btn-sm btn-success fw-bold no-print"><i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV</a>
+                         <button onclick="window.print()" class="btn btn-sm btn-light fw-bold no-print"><i class="bi bi-printer-fill me-1"></i>Print / PDF</button>
                     </div>
                 </div>
                 <div class="card-body p-2 bg-light">
@@ -23,6 +24,23 @@
                             .card-header, .card-footer, .navbar, footer { display: none !important; }
                         }
                     </style>
+                    <!-- Date Filter Form -->
+                    <form method="get" class="row g-2 align-items-end mb-3 px-2">
+                        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+                        {% if current_direction %}<input type="hidden" name="direction" value="{{ current_direction }}">{% endif %}
+                        <div class="col-auto">
+                            <label class="form-label fw-bold mb-0">From Date</label>
+                            <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request.GET.from_date }}">
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label fw-bold mb-0">To Date</label>
+                            <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request.GET.to_date }}">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-filter me-1"></i>Filter</button>
+                            <a href="?" class="btn btn-secondary btn-sm fw-bold">Reset</a>
+                        </div>
+                    </form>
                     <!-- Balance Table -->
                     <div class="table-responsive border bg-white rounded h-75vh">
                         <table class="table table-sm table-hover table-striped mb-0">

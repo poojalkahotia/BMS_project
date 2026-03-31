@@ -7,7 +7,29 @@
         <h2 class="text-primary"><i class="bi bi-box-seam me-2"></i>Current Stock (All Item Balance)</h2>
     </div>
     <div class="col-md-4 text-end">
-        <button onclick="window.print()" class="btn btn-secondary"><i class="bi bi-printer me-2"></i>Print</button>
+        <a href="{% url 'export_stock_csv' %}?from_date={{ request.GET.from_date }}&to_date={{ request.GET.to_date }}" class="btn btn-success no-print"><i class="bi bi-file-earmark-spreadsheet me-2"></i>CSV</a>
+        <button onclick="window.print()" class="btn btn-secondary no-print"><i class="bi bi-printer me-2"></i>Print</button>
+    </div>
+</div>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body bg-light border-bottom">
+        <form method="get" class="row g-3 align-items-end">
+            {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+            {% if current_direction %}<input type="hidden" name="direction" value="{{ current_direction }}">{% endif %}
+            <div class="col-md-3">
+                <label class="form-label fw-bold">From Date</label>
+                <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request.GET.from_date }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">To Date</label>
+                <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request.GET.to_date }}">
+            </div>
+            <div class="col-md-6">
+                <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-filter me-1"></i>Filter</button>
+                <a href="?" class="btn btn-secondary btn-sm fw-bold ms-2">Reset</a>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -73,6 +95,7 @@
                 </tbody>
             </table>
         </div>
+        {% include 'includes/pagination.html' %}
     </div>
 </div>
 {% endblock %}

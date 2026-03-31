@@ -46,7 +46,7 @@
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h6>Total Parties</h6>
+                    <h6><i class="bi bi-people-fill text-primary me-1"></i>Total Parties</h6>
                     <h3>{{ total_parties }}</h3>
                 </div>
             </div>
@@ -55,8 +55,9 @@
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h6>Total Sales</h6>
+                    <h6><i class="bi bi-cart-check-fill text-success me-1"></i>Total Sales</h6>
                     <h3>{{ total_sales }}</h3>
+                    <p class="mb-0 text-success fw-bold"><i class="bi bi-currency-rupee"></i>{{ total_sale_amount|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
@@ -64,8 +65,9 @@
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h6>Total Purchases</h6>
+                    <h6><i class="bi bi-bag-fill text-warning me-1"></i>Total Purchases</h6>
                     <h3>{{ total_purchases }}</h3>
+                    <p class="mb-0 text-danger fw-bold"><i class="bi bi-currency-rupee"></i>{{ total_purchase_amount|floatformat:2 }}</p>
                 </div>
             </div>
         </div>
@@ -73,8 +75,8 @@
         <div class="col-md-3">
             <div class="card stats-card">
                 <div class="card-body">
-                    <h6>Total Balance</h6>
-                    <h3>{{ total_balance }}</h3>
+                    <h6><i class="bi bi-wallet2 text-info me-1"></i>Net Balance</h6>
+                    <h3 class="{% if total_balance >= 0 %}text-success{% else %}text-danger{% endif %}"><i class="bi bi-currency-rupee"></i>{{ total_balance|floatformat:2 }}</h3>
                 </div>
             </div>
         </div>

@@ -33,7 +33,16 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary btn-sm fw-bold w-100"><i class="bi bi-search me-1"></i>Show Ledger</button>
+                            <label class="form-label fw-bold mb-0">From</label>
+                            <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request.GET.from_date }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold mb-0">To</label>
+                            <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request.GET.to_date }}">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-search me-1"></i>Show</button>
+                            <a href="?" class="btn btn-secondary btn-sm fw-bold ms-1">Reset</a>
                         </div>
                     </form>
 
@@ -44,7 +53,9 @@
                             <div class="row text-center">
                                 <div class="col border-end">
                                     <small class="text-muted fw-bold d-block">Opening Balance</small>
-                                    <span class="fw-bold {% if summary.opening_balance > 0 %}text-success{% elif summary.opening_balance < 0 %}text-danger{% endif %}">{{ summary.opening_balance|floatformat:2 }}</span>
+                                    <span class="fw-bold {% if summary.opening_balance > 0 %}text-success{% elif summary.opening_balance < 0 %}text-danger{% endif %}">
+                                        {% if summary.opening_balance > 0 %}{{ summary.opening_balance|floatformat:2 }} Dr{% elif summary.opening_balance < 0 %}{{ summary.opening_balance|floatformat:2 }} Cr{% else %}0.00{% endif %}
+                                    </span>
                                 </div>
                                 <div class="col border-end">
                                     <small class="text-muted fw-bold d-block">Total Sale</small>
@@ -64,7 +75,9 @@
                                 </div>
                                 <div class="col">
                                     <small class="text-muted fw-bold d-block">Closing Balance</small>
-                                    <span class="fs-6 fw-bold {% if summary.closing_balance > 0 %}text-success{% elif summary.closing_balance < 0 %}text-danger{% endif %}">{{ summary.closing_balance|floatformat:2 }}</span>
+                                    <span class="fs-6 fw-bold {% if summary.closing_balance > 0 %}text-success{% elif summary.closing_balance < 0 %}text-danger{% endif %}">
+                                        {% if summary.closing_balance > 0 %}{{ summary.closing_balance|floatformat:2 }} Dr{% elif summary.closing_balance < 0 %}{{ summary.closing_balance|floatformat:2 }} Cr{% else %}0.00{% endif %}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -116,7 +129,11 @@
                                     <td>{{ entry.remark|default:"-" }}</td>
                                     <td class="text-end text-success fw-bold">{% if entry.dr_amt > 0 %}{{ entry.dr_amt|floatformat:2 }}{% else %}-{% endif %}</td>
                                     <td class="text-end text-danger fw-bold">{% if entry.cr_amt > 0 %}{{ entry.cr_amt|floatformat:2 }}{% else %}-{% endif %}</td>
-                                    <td class="text-end fw-bold">{{ entry.balance|floatformat:2 }}</td>
+                                    <td class="text-end fw-bold">
+                                        {% if entry.balance > 0 %}{{ entry.balance|floatformat:2 }} <span class="text-success">Dr</span>
+                                        {% elif entry.balance < 0 %}{{ entry.balance|floatformat:2 }} <span class="text-danger">Cr</span>
+                                        {% else %}0.00{% endif %}
+                                    </td>
                                 </tr>
                                 {% empty %}
                                 <tr>

@@ -15,7 +15,7 @@
 <div class="card shadow-sm mb-4">
     <div class="card-body bg-light">
         <form method="get" class="row g-3 align-items-end">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <label for="item" class="form-label fw-bold">Select Item</label>
                 <select name="item" id="item" class="form-select select2" onchange="this.form.submit()">
                     <option value="">-- Choose an Item --</option>
@@ -26,9 +26,18 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-2">
+                <label class="form-label fw-bold">From Date</label>
+                <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request.GET.from_date }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">To Date</label>
+                <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request.GET.to_date }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-filter me-1"></i>Filter</button>
                 {% if selected_item %}
-                    <div class="d-flex justify-content-end gap-3 text-muted">
+                    <div class="mt-2 text-muted">
                         <div>Opening Stock: <span class="fw-bold text-dark">{{ summary.opening_stock|floatformat:2 }}</span></div>
                         <div>Current Stock: <span class="fw-bold text-primary">{{ summary.closing_stock|floatformat:2 }}</span></div>
                     </div>

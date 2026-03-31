@@ -11,6 +11,23 @@
                     <a href="{% url 'payment_entry' %}" class="btn btn-light btn-sm fw-bold"><i class="bi bi-plus-lg me-1"></i>New Entry</a>
                 </div>
                 <div class="card-body p-2 bg-light">
+                    <!-- Date Filter Form -->
+                    <form method="get" class="row g-2 align-items-end mb-3 px-2">
+                        {% if current_sort %}<input type="hidden" name="sort" value="{{ current_sort }}">{% endif %}
+                        {% if current_direction %}<input type="hidden" name="direction" value="{{ current_direction }}">{% endif %}
+                        <div class="col-auto">
+                            <label class="form-label fw-bold mb-0">From Date</label>
+                            <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request.GET.from_date }}">
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label fw-bold mb-0">To Date</label>
+                            <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request.GET.to_date }}">
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-primary btn-sm fw-bold"><i class="bi bi-filter me-1"></i>Filter</button>
+                            <a href="?" class="btn btn-secondary btn-sm fw-bold">Reset</a>
+                        </div>
+                    </form>
                     <div class="table-responsive border bg-white rounded h-75vh">
                         <table class="table table-sm table-hover table-striped mb-0">
                             <thead class="table-light sticky-top">
@@ -70,6 +87,7 @@
                             </tbody>
                         </table>
                     </div>
+                    {% include 'includes/pagination.html' %}
                 </div>
             </div>
         </div>

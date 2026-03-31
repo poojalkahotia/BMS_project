@@ -50,12 +50,21 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th class="text-secondary fw-bold small">Company Name</th>
+                                        <th class="text-secondary fw-bold small text-center" style="width: 80px;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for company in companies %}
                                     <tr>
                                         <td class="small">{{ company.companyname }}</td>
+                                        <td class="text-center">
+                                            <form method="POST" action="{% url 'company_delete' company.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger btn-sm py-0 px-1" onclick="return confirm('Are you sure you want to delete this company?')">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
